@@ -1,0 +1,26 @@
+# --- Web Framework & Server ---
+fastapi>=0.110.0
+uvicorn[standard]
+
+# --- Validation & Configuration ---
+# Note: In V2, BaseSettings was moved to a separate package
+pydantic>=2.0.0
+pydantic-settings
+
+# --- Database & ORM ---
+sqlalchemy>=2.0.0
+asyncpg
+alembic
+pgvector
+
+# --- Data Engineering (Background Tasks) ---
+celery
+redis
+
+# --- RAG / AI / Processing ---
+pymupdf
+langchain
+langchain-google-genai
+
+# --- Async operation ----
+aiofiles
