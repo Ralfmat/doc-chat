@@ -1,8 +1,11 @@
 import os
 import uuid
 import aiofiles
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from app.models.document import Document
+from app.api.dependencies import get_db
+from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from app.schemas.document import UploadResponse, TaskStatusResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Right now I use local file storage for simplicity, but I'm going to switch to S3
 
@@ -12,7 +15,7 @@ UPLOAD_DIR = "app/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_202_ACCEPTED)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
     """Receives a PDF, saves it asynchronously, and triggers a background extraction task."""
     
     if file.content_type != "application/pdf":
@@ -31,6 +34,15 @@ async def upload_document(file: UploadFile = File(...)):
     # TODO replace this mock UUID with actual `task = process_pdf.delay(file_path)`
     mock_task_id = str(uuid.uuid4())
     
+    new_document = Document(
+        filename=file.filename,
+        task_id=mock_task_id,
+        status="PENDING"
+    )
+    db.add(new_document)
+    await db.commit()
+    await db.refresh(new_document)
+
     return UploadResponse(
         filename=file.filename,
         task_id=mock_task_id,
