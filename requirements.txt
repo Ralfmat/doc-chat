@@ -22,5 +22,8 @@ pymupdf
 langchain
 langchain-google-genai
 
-# --- Async operation ----
+# --- Async operation ---
 aiofiles
+
+# --- Misc ---
+python-multipart
