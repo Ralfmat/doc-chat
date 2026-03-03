@@ -6,6 +6,9 @@ from app.api.dependencies import get_db
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from app.schemas.document import UploadResponse, TaskStatusResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from celery.result import AsyncResult
+from app.services.tasks import process_pdf_task
+from app.core.celery_app import celery_app
 
 # Right now I use local file storage for simplicity, but I'm going to switch to S3
 
@@ -30,16 +33,18 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
                 await out_file.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
-        
-    # TODO replace this mock UUID with actual `task = process_pdf.delay(file_path)`
-    mock_task_id = str(uuid.uuid4())
     
     new_document = Document(
         filename=file.filename,
-        task_id=mock_task_id,
         status="PENDING"
     )
     db.add(new_document)
+    await db.commit()
+    await db.refresh(new_document)
+
+    task = process_pdf_task.delay(file_path=file_path, document_id=str(new_document.id))
+
+    new_document.task_id = task.id
     await db.commit()
     await db.refresh(new_document)
 
@@ -52,8 +57,10 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
 @router.get("/status/{task_id}", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str):
     """Checks the status of a Celery background task."""
-    # TODO query actual Celery AsyncResult(task_id)
+
+    task_result = AsyncResult(task_id, app=celery_app)
+    
     return TaskStatusResponse(
         task_id=task_id,
-        status="PENDING" 
+        status=task_result.status
     )
