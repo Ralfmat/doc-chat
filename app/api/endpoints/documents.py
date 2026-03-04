@@ -50,7 +50,7 @@ async def upload_document(file: UploadFile = File(...), db: AsyncSession = Depen
 
     return UploadResponse(
         filename=file.filename,
-        task_id=mock_task_id,
+        task_id=str(task.id),
         message="File uploaded successfully. Background processing initiated."
     )
 
